@@ -921,35 +921,32 @@ class Server extends AppModel
 
         // Fetch event index from cache if exists and is not modified on server
         $redis = RedisTool::init();
-        $indexFromCache = $redis->get("misp:event_index_cache:{$serverSync->serverId()}");
-        if ($indexFromCache) {
-            $etagPos = strpos($indexFromCache, "\n");
-            if ($etagPos === false) {
-                throw new RuntimeException("Could not find etag in cache for server {$serverSync->serverId()}");
-            }
-            $etag = substr($indexFromCache, 0, $etagPos);
-            $serverSync->debug("Event index loaded from Redis cache with etag $etag");
+        $cacheEtag = $redis->get("misp:event_index_cache:etag:{$serverSync->serverId()}");
+        if ($cacheEtag) {
+            $serverSync->debug("Event index loaded from Redis cache with etag $cacheEtag");
         } else {
-            $etag = '""';  // Provide empty ETag, so MISP will compute ETag for returned data
+            $cacheEtag = '""';  // Provide empty ETag, so MISP will compute ETag for returned data
         }
 
-        $response = $serverSync->eventIndex($filterRules, $etag);
+        $response = $serverSync->eventIndex($filterRules, $cacheEtag);
 
-        if ($response->isNotModified() && $indexFromCache) {
-            return JsonTool::decode(RedisTool::decompress(substr($indexFromCache, $etagPos + 1)));
+        if ($response->isNotModified() && $cacheEtag !== '""') {
+            $eventIndexFromCache = $redis->get("misp:event_index_cache:content:{$serverSync->serverId()}");
+            if ($eventIndexFromCache) {
+                $eventIndexFromCache = RedisTool::decompress($eventIndexFromCache);
+                return JsonTool::decode($eventIndexFromCache);
+            }
         }
 
         // Save to cache for 24 hours if ETag provided
         $etag = $response->getHeader('etag');
         if ($etag) {
             $serverSync->debug("Event index from remote server has different etag $etag, saving to cache");
-            $data = "$etag\n" . RedisTool::compress($response->body);
-            $redis->setex("misp:event_index_cache:{$serverSync->serverId()}", 3600 * 24, $data);
-        } elseif ($indexFromCache) {
-            RedisTool::unlink($redis, "misp:event_index_cache:{$serverSync->serverId()}");
+            $data = RedisTool::compress($response->body);
+            $redis->setex("misp:event_index_cache:etag:{$serverSync->serverId()}", 3600 * 24, $etag);
+            $redis->setex("misp:event_index_cache:content:{$serverSync->serverId()}", 3600 * 24, $data);
+            unset($data);
         }
-
-        unset($indexFromCache); // clean up memory
 
         $eventIndex = $response->json();
 
