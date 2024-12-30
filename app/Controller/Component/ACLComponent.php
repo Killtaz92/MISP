@@ -822,7 +822,7 @@ class ACLComponent extends Component
             'admin_quickEmail' => array('perm_admin'),
             'admin_view' => array('perm_admin'),
             'attributehistogram' => array('*'),
-            'change_pw' => ['AND' => ['self_management_enabled', 'password_change_enabled', 'not_read_only_authkey']],
+            'change_pw' => ['OR' => ['perm_site_admin', ['AND' => ['self_management_enabled', 'password_change_enabled', 'not_read_only_authkey']]]],
             'checkAndCorrectPgps' => array(),
             'checkIfLoggedIn' => array('*'),
             'dashboard' => array('*'),
