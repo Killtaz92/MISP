@@ -5905,7 +5905,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_api' => array(
                     'level' => 0,
@@ -5913,7 +5914,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_skip_db' => array(
                     'level' => 0,
@@ -5929,7 +5931,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_include_sql_queries' => [
                     'level' => 0,
@@ -5937,7 +5940,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ],
                 'log_user_ips' => array(
                     'level' => 0,
@@ -6988,7 +6992,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'username_in_response_header' => [
                     'level' => self::SETTING_OPTIONAL,
