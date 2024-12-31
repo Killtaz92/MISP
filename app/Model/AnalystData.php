@@ -120,7 +120,6 @@ class AnalystData extends AppModel
     public function afterFind($results, $primary = false)
     {
         parent::afterFind($results, $primary);
-
         $this->setUser();
         foreach ($results as &$v) {
             $v[$this->alias]['note_type'] = $this->current_type_id;
@@ -135,7 +134,7 @@ class AnalystData extends AppModel
                 $this->Opinion = ClassRegistry::init('Opinion');
                 $this->Note->fetchRecursive = false;
                 $this->Opinion->fetchRecursive = false;
-                $v[$this->alias] = $this->fetchChildNotesAndOpinions($this->current_user, $v[$this->alias]);
+                $v[$this->alias] = $this->fetchChildNotesAndOpinions($this->current_user, $v[$this->alias], false);
                 $this->Note->fetchRecursive = true;
                 $this->Opinion->fetchRecursive = true;
             }

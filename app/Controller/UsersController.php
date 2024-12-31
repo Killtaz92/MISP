@@ -3010,7 +3010,7 @@ class UsersController extends AppController
 
     private function __canChangePassword()
     {
-        return $this->ACL->canUserAccess($this->Auth->user(), 'users', 'change_pw');
+        return $this->_isSiteAdmin() || $this->ACL->canUserAccess($this->Auth->user(), 'users', 'change_pw');
     }
 
     private function __canChangeLogin()

@@ -45,7 +45,7 @@ class AnalystDataParentBehavior extends ModelBehavior
             $this->{$type} = ClassRegistry::init($type);
             $this->{$type}->fetchRecursive = $fetchRecursive;
             $temp = $this->{$type}->fetchForUuid($object['uuid'], $this->__currentUser);
-            if (!empty($temp[$type])) {
+            if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
                     $data[$type][] = $temp_element[$type];
                     $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], $this->__isRest);
