@@ -438,6 +438,9 @@ class UserSetting extends AppModel
     public function setSetting(array $user, array $data)
     {
         $userSetting = array();
+        if (empty($user['Role']['perm_site_admin']) && !empty(Configure::read('MISP.disableUserSelfManagement'))) {
+            throw new MethodNotAllowedException(__('User self-management is disabled on this instance.'));
+        }
         if (!empty($data['UserSetting']['user_id']) && is_numeric($data['UserSetting']['user_id'])) {
             $user_to_edit = $this->User->find('first', array(
                 'recursive' => -1,
