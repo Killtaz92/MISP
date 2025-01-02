@@ -263,7 +263,7 @@ class UserSetting extends AppModel
          } else {
              if (
                  $user['id'] === $setting['UserSetting']['user_id'] &&
-                 (!Configure::check('MISP.disableUserSelfManagement') || Configure::check('MISP.disableUserSelfManagement'))
+                 (empty(Configure::read('MISP.disableUserSelfManagement')))
              ) {
                  return true;
              }
