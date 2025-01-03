@@ -68,11 +68,12 @@ class RedisTool
 
         foreach ($pattern as $p) {
             $iterator = null;
-            while (false !== ($keys = $redis->scan($iterator, $p, 1000))) {
+            do {
+                $keys = $redis->scan($iterator, $p, 1000);
                 foreach ($keys as $key) {
                     yield $key;
                 }
-            }
+            } while ($iterator !== 0);
         }
     }
 
