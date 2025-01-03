@@ -480,13 +480,13 @@ class Correlation extends AppModel
             $conditions1 = $conditions2 = $conditions;
 
             $conditions1['Attribute.value1'] = $cV;
+            $conditions1['AND'][] = $extraConditions;
             $conditions2[] = [
                 'AND' => [
                     'Attribute.value2' => $cV,
                     'NOT' => ['Attribute.type' => MispAttribute::PRIMARY_ONLY_CORRELATING_TYPES]
                 ]
             ];
-
             $correlatingAttributes1 = $this->Attribute->find('all', [
                 'conditions' => $conditions1,
                 'recursive' => -1,
@@ -508,8 +508,23 @@ class Correlation extends AppModel
                 // let's fetch the limit +1 - still allows us to detect overcorrelations, but we'll also never need more
                 'limit' => empty($correlationLimit) ? null : ($correlationLimit+1)
             ]);
-            $correlatingAttributes = array_merge($correlatingAttributes1, $correlatingAttributes2);
-            unset($correlatingAttributes1, $correlatingAttributes2);
+            if (!empty($extraConditions)) {
+                $correlatingAttributes3 = $this->Attribute->find('all', [
+                    'conditions' => $extraConditions,
+                    'recursive' => -1,
+                    'fields' => $this->getFieldRules(),
+                    'contain' => $this->getContainRules(),
+                    'order' => [],
+                    'callbacks' => 'before', // memory leak fix
+                    // let's fetch the limit +1 - still allows us to detect overcorrelations, but we'll also never need more
+                    'limit' => empty($correlationLimit) ? null : ($correlationLimit+1)
+                ]);
+                $correlatingAttributes = array_merge($correlatingAttributes1, $correlatingAttributes2, $correlatingAttributes3);
+                unset($correlatingAttributes1, $correlatingAttributes2, $correlatingAttributes3);
+            } else {
+                $correlatingAttributes = array_merge($correlatingAttributes1, $correlatingAttributes2);
+                unset($correlatingAttributes1, $correlatingAttributes2);
+            }
 
             // Let's check if we don't have a case of an over-correlating attribute
             $count = count($correlatingAttributes);
