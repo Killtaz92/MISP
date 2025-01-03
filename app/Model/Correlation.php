@@ -480,7 +480,6 @@ class Correlation extends AppModel
             $conditions1 = $conditions2 = $conditions;
 
             $conditions1['Attribute.value1'] = $cV;
-            $conditions1['AND'][] = $extraConditions;
             $conditions2[] = [
                 'AND' => [
                     'Attribute.value2' => $cV,
