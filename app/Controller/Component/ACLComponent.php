@@ -54,7 +54,7 @@ class ACLComponent extends Component
             'attributeStatistics' => array('*'),
             'bro' => array('*'),
             'checkAttachments' => array(),
-            'checkComposites' => array('perm_admin'),
+            'checkComposites' => array('perm_site_admin'),
             'checkOrphanedAttributes' => array(),
             'delete' => array('perm_add'),
             'deleteSelected' => array('perm_add'),
@@ -160,6 +160,7 @@ class ACLComponent extends Component
             'add' => ['perm_add'],
             'delete' => ['perm_add'],
             'index' => ['*'],
+            'serverSign' => ['perm_server_sign'],
             'view' => ['*']
         ],
         'dashboards' => array(
@@ -250,11 +251,28 @@ class ACLComponent extends Component
             'restore' => array('perm_add'),
             'index' => array('*'),
             'getProxyMISPElements' => array('*'),
-            'extractAllFromReport' => array('*'),
-            'extractFromReport' => array('*'),
+            'extractAllFromReport' => array('perm_add'),
+            'extractFromReport' => array('perm_add'),
             'replaceSuggestionInReport' => array('*'),
-            'importReportFromUrl' => array('*'),
-            'sendToLLM' => ['*'],
+            'importReportFromUrl' => array('perm_add'),
+            'sendToLLM' => ['perm_add'],
+            'configureTemplateVariable' => ['perm_add'],
+            'downloadAsPDF' => ['*'],
+            'addTag' => ['perm_tagger'],
+            'removeTag' => ['perm_tagger'],
+            'uploadPicture' => ['perm_add'],
+            'viewPicture' => ['*'],
+            'managedImportedPictures' => [],
+            'deletePicture' => [],
+            'purgeUnusedPictures' => [],
+            'setFileAlias' => []
+        ),
+        'eventReportTemplateVariables' => array(
+            'add' => [],
+            'view' => ['*'],
+            'edit' => [],
+            'delete' => [],
+            'index' => ['*'],
         ),
         'events' => array(
             'add' => array('perm_add'),
@@ -318,6 +336,7 @@ class ACLComponent extends Component
             'restSearch' => array('*'),
             'restSearchExport' => array('*'),
             'runTaxonomyExclusivityCheck' => array('*'),
+            'runWorkflow' => array(),
             'saveFreeText' => array('perm_add'),
             'stix' => array('*'),
             'stix2' => array('*'),
@@ -368,7 +387,9 @@ class ACLComponent extends Component
         'galaxies' => array(
             'attachCluster' => array('perm_tagger'),
             'attachMultipleClusters' => array('perm_tagger'),
-            'delete' => array(),
+            'add' => array('perm_galaxy_editor'),
+            'edit' => array('perm_galaxy_editor'),
+            'delete' => array('perm_galaxy_editor'),
             'disable' => array(),
             'enable' => array(),
             'export' => array('*'),
@@ -434,7 +455,7 @@ class ACLComponent extends Component
         ),
         'logs' => array(
             'admin_index' => array('perm_audit'),
-            'admin_search' => array('perm_audit'),
+            'search' => array('perm_audit'),
             'event_index' => array('*'),
             'returnDates' => array('*'),
             'testForStolenAttributes' => array(),
@@ -501,8 +522,6 @@ class ACLComponent extends Component
         ),
         'objectTemplates' => array(
             'activate' => array(),
-            'add' => array('perm_object_template'),
-            'edit' => array('perm_object_template'),
             'delete' => array('perm_object_template'),
             'getToggleField' => array(),
             'getRaw' => array('perm_object_template'),
@@ -609,6 +628,7 @@ class ACLComponent extends Component
             'serverSettings' => array(),
             'serverSettingsEdit' => array(),
             'serverSettingsReloadSetting' => array(),
+            'serverSign' => ['perm_server_sign'],
             'startWorker' => array(),
             'startZeroMQServer' => array(),
             'statusZeroMQServer' => array(),
@@ -806,7 +826,6 @@ class ACLComponent extends Component
             'checkAndCorrectPgps' => array(),
             'checkIfLoggedIn' => array('*'),
             'dashboard' => array('*'),
-            'delete' => array('perm_admin'),
             'discardRegistrations' => array(),
             'downloadTerms' => array('*'),
             'edit' => array('self_management_enabled'),
@@ -875,6 +894,8 @@ class ACLComponent extends Component
             'import' => ['perm_warninglist'],
         ),
         'workflows' => [
+            'add' => [],
+            'adhoc' => [],
             'index' => [],
             'rebuildRedis' => [],
             'edit' => [],
@@ -1137,7 +1158,7 @@ class ACLComponent extends Component
     public function canModifyGalaxyCluster(array $user, array $cluster)
     {
         if (!isset($cluster['GalaxyCluster'])) {
-            throw new InvalidArgumentException('Passed object does not contain an GalaxyCluster.');
+            throw new InvalidArgumentException('Passed object does not contain a GalaxyCluster.');
         }
         if ($cluster['GalaxyCluster']['default']) {
             return false; // it is not possible to edit default clusters
@@ -1149,6 +1170,30 @@ class ACLComponent extends Component
             return false;
         }
         return $cluster['GalaxyCluster']['orgc_id'] == $user['org_id'];
+    }
+
+    /**
+     * Checks if user can modify given galaxy cluster
+     *
+     * @param array $user
+     * @param array $cluster
+     * @return bool
+     */
+    public function canModifyGalaxy(array $user, array $galaxy)
+    {
+        if (!isset($galaxy['Galaxy'])) {
+            throw new InvalidArgumentException('Passed object does not contain a Galaxy.');
+        }
+        if ($galaxy['Galaxy']['default']) {
+            return false; // it is not possible to edit default clusters
+        }
+        if ($user['Role']['perm_site_admin']) {
+            return true;
+        }
+        if (!$user['Role']['perm_galaxy_editor']) {
+            return false;
+        }
+        return $galaxy['Galaxy']['orgc_id'] == $user['org_id'];
     }
 
     /**

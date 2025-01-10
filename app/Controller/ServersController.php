@@ -1562,7 +1562,7 @@ class ServersController extends AppController
                     'action' => 'serverSettingsEdit',
                     'user_id' => $this->Auth->user('id'),
                     'title' => 'Server setting issue',
-                    'change' => 'There was an issue witch changing ' . $setting['name'] . ' to ' . $this->request->data['Server']['value']  . '. The error message returned is: app/Config.config.php is not writeable to the apache user. No changes were made.',
+                    'change' => 'There was an issue with changing ' . $setting['name'] . ' to ' . $this->request->data['Server']['value']  . '. The error message returned is: app/Config.config.php is not writeable to the apache user. No changes were made.',
                 ));
                 if ($this->_isRest()) {
                     return $this->RestResponse->saveFailResponse('Servers', 'serverSettingsEdit', false, 'app/Config.config.php is not writeable to the apache user.', $this->response->type());
@@ -1785,7 +1785,7 @@ class ServersController extends AppController
                         }
                     }
                 }
-                if (!$mismatch && $version[2] < 111) {
+                if (!$mismatch && $version[1] == 4 && $version[2] < 111) {
                     $mismatch = 'proposal';
                 }
                 if (!$perm_sync && !$perm_sighting) {
@@ -1795,6 +1795,13 @@ class ServersController extends AppController
                 if (!$perm_sync && $perm_sighting) {
                     $result['status'] = 8;
                     return new CakeResponse(array('body'=> json_encode($result), 'type' => 'json'));
+                }
+                // Handle 2.5 <-> 2.4 compatibility
+                if ($mismatch && ($version[1] == 4 && $local_version['minor'] == 5) || ($version[1] == 5 && $local_version['minor'] == 4)) {
+                    $mismatch = 'minor_compatible';
+                    if ($version[1] == 4 && $version[2] < 111) {
+                            $mismatch = 'proposal';
+                    }
                 }
                 return $this->RestResponse->viewData([
                     'status' => 1,

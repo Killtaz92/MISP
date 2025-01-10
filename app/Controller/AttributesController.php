@@ -1549,7 +1549,7 @@ class AttributesController extends AppController
 
             $this->Session->write('search_attributes_filters', null);
         }
-        if (!empty($filters)) {
+        if (!empty($filters) || $this->request->is('post')) {
             $filters['includeCorrelations'] = 1;
             $params = $this->MispAttribute->restSearch($user, 'json', $filters, true);
             if (!isset($params['conditions']['Attribute.deleted'])) {
@@ -2625,9 +2625,15 @@ class AttributesController extends AppController
                                 if (empty($tagCollection)) {
                                     return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag Collection.')), 'status'=>200, 'type' => 'json'));
                                 }
-                                $tag_id_list = array_column($tagCollection[0]['TagCollectionTag'], 'tag_id');
-                            } else {
+                                $tag_id_list = array_merge($tag_id_list, array_column($tagCollection[0]['TagCollectionTag'], 'tag_id'));
+                            } else if(is_numeric($tag_id)){
                                 $tag_id_list[] = $tag_id;
+                            } else {
+                                $tagId = $this->Attribute->AttributeTag->Tag->lookupTagIdForUser($this->Auth->user(), trim($tag_id));
+                                if (empty($tagId)) {
+                                    return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag.')), 'status'=>200, 'type' => 'json'));
+                                }
+                                $tag_id_list[] = $tagId;
                             }
                         }
                     } else {

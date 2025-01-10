@@ -152,7 +152,7 @@ function genericPopup(url, popupTarget, callback) {
 }
 
 function screenshotPopup(url, title) {
-    if (!url.startsWith('data:image/')) {
+    if (!url.startsWith('data:image/') && url.split('.').pop() != 'png') {
         url = url.slice(0, -1);
     }
     url = $('<div>').text(url).html();
@@ -797,6 +797,37 @@ function quickSubmitTagCollectionTagForm(selected_tag_ids, addData) {
     });
 }
 
+function quickSubmitEventReportTagForm(selected_tag_ids, addData) {
+    var eventreport_id = addData.id;
+    var localFlag = '';
+    if (undefined != addData['local'] && addData['local']) {
+        localFlag = '/local:1';
+    }
+    var url = baseurl + "/event_reports/addTag/" + eventreport_id + localFlag;
+    fetchFormDataAjax(url, function(formData) {
+        var $formData = $(formData);
+        $formData.find('#EventReportTag').val(JSON.stringify(selected_tag_ids));
+        xhr({
+            data: $formData.serialize(),
+            success:function (data) {
+                handleGenericAjaxResponse(data);
+                reloadEventReportTable();
+            },
+            error:function() {
+                showMessage('fail', 'Could not add tag.');
+                // refreshTagCollectionRow(eventreport_id);
+            },
+            complete:function() {
+                $("#popover_form").fadeOut();
+                $("#gray_out").fadeOut();
+                $(".loading").hide();
+            },
+            type:"post",
+            url: url
+        });
+    });
+}
+
 function refreshTagCollectionRow(tag_collection_id) {
     $.ajax({
         type:"get",
@@ -827,6 +858,8 @@ function modifyTagRelationship() {
                    var attribute_id = data.data.attribute_id;
                    loadAttributeTags(attribute_id);
                    loadGalaxies(attribute_id, 'attribute');
+               } else if ("event_report_id" in data.data) {
+                    reloadEventReportTable()
                } else {
                    var event_id = data.data.event_id;
                    loadEventTags(event_id);
@@ -910,6 +943,14 @@ function toggleAllCheckboxes() {
         $(".select").prop("checked", true);
     } else {
         $(".select").prop("checked", false);
+    }
+}
+
+function toggleAllObjectAttributeCheckboxes(object_id){
+    if ($(".select_all_object_attributes_" + object_id).is(":checked")) {
+        $('.Object_' + object_id + '_collapsible_attr input.select_attribute').prop("checked", true);
+    } else {
+        $('.Object_' + object_id + '_collapsible_attr input.select_attribute').prop("checked", false);
     }
 }
 
@@ -1203,6 +1244,8 @@ function removeObjectTag(context, object, tag) {
                 loadAttributeTags(object);
             } else if (context == 'tag_collection') {
                 refreshTagCollectionRow(object);
+            } else if (context == 'event_report') {
+                reloadEventReportTable();
             } else {
                 loadEventTags(object);
             }
@@ -2018,7 +2061,7 @@ function openModal(heading, body, footer, modal_option, css_container, css_body,
     }
     modal_html += '</div>';
     $('body').append($(modal_html));
-    $('#'+modal_id).modal(modal_option !== undefined ? modal_option : {});
+    return $('#'+modal_id).modal(modal_option !== undefined ? modal_option : {});
 }
 
 function resizePopoverBody() {
@@ -2811,7 +2854,7 @@ function freetextSerializeAttributes() {
 
 function freetextImportResultsSubmit(event_id, count) {
     var attributeArray = freetextSerializeAttributes();
-    $("#MispAttributeJsonObject").val(JSON.stringify(attributeArray));
+    $("#AttributeJsonObject").val(JSON.stringify(attributeArray));
     var formData = $(".mainForm").serialize();
     xhr({
         type: "post",
@@ -3557,6 +3600,8 @@ function testConnection(id) {
                     } else if (result.mismatch == "major") {
                         compatibility = "Incompatible";
                         compatibility_colour = "red";
+                    } else if (result.mismatch == "minor_compatible") {
+                        compatibility_colour = "green";
                     }
                 } else if (result.newer == "remote") {
                     colours.local = 'class="' + issue_colour + '"';
@@ -3569,8 +3614,15 @@ function testConnection(id) {
                     compatibility = "Proposal pull disabled (remote version < v2.4.111)";
                 }
                 if (result.mismatch != false && result.mismatch != "proposal") {
-                    if (result.newer == "remote") status_message = "Local instance outdated, update!";
-                    else status_message = "Remote outdated, notify admin!"
+                    if (result.newer == "remote") {
+                        status_message = "Local instance outdated, update!";
+                    } else if (result.newer == "local") {
+                        if (result.mismatch == "minor_compatible") {
+                            status_message = "Remote on 2.4, moving to 2.5 is recommended.";
+                        } else {
+                            status_message = "Remote outdated, notify admin!";
+                        }
+                    }
                     colours.status = 'class="' + issue_colour + '"';
                 }
                 var post_result;
@@ -5896,4 +5948,14 @@ function filterSearch(callback) {
             $div.remove();
         });
     });
+}
+
+function submitLogSearch() {
+    var url = baseurl + '/logs/index';
+    $('.log-search-field').each(function() {
+        if ($(this).val() !== '') {
+            url += '/' + encodeURIComponent($(this).data('field')) + ':' + encodeURIComponent($(this).val().replace("/", ""));
+        }
+    });
+    $(location).prop('href', url);
 }

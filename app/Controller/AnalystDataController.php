@@ -185,7 +185,7 @@ class AnalystDataController extends AppController
             $id = $this->AnalystData->getIDFromUUID($type, $id);
         }
 
-        $this->AnalystData->fetchRecursive = true;
+        $this->AnalystData->fetchRecursive = false;
         $conditions = $this->AnalystData->buildConditions($this->Auth->user());
         $this->CRUD->view($id, [
             'conditions' => $conditions,
@@ -193,6 +193,19 @@ class AnalystDataController extends AppController
             'afterFind' => function(array $analystData) {
                 if (!$this->request->is('ajax')) {
                     unset($analystData[$this->modelSelection]['_canEdit']);
+                }
+                if ($this->_isRest()) {
+                    $children = $this->AnalystData->fetchChildNotesAndOpinions($this->Auth->user(), $analystData[$this->modelSelection], true, 5);
+                    if (!empty($children)) {
+                        foreach ($children as $child) {
+                            foreach ($child as $childType => $childData) {
+                                $analystData[$this->modelSelection][$childType][] = $childData;
+                            }
+                        }
+                    }    
+                } else {
+                    $children = $this->AnalystData->fetchChildNotesAndOpinions($this->Auth->user(), $analystData[$this->modelSelection], false, 1);
+                    $analystData[$this->modelSelection] = $analystData[$this->modelSelection] + $children;
                 }
                 return $analystData;
             }
@@ -274,7 +287,7 @@ class AnalystDataController extends AppController
         if (!empty($filters['orgc_name'])) {
             $orgcNames = $filters['orgc_name'];
             if (!is_array($orgcNames)) {
-                $orgcName = [$orgcNames];
+                $orgcNames = [$orgcNames];
             }
             $filterName = 'orgc_uuid';
             foreach ($orgcNames as $orgcName) {
@@ -291,6 +304,10 @@ class AnalystDataController extends AppController
                     }
                     $options['OR'][] = [$filterName => $orgc['uuid']];
                 }
+            }
+
+            if (empty($options)) {
+                return $this->RestResponse->viewData([], $this->response->type());
             }
         }
         $allData = $this->AnalystData->indexMinimal($this->Auth->user(), $options);

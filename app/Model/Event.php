@@ -115,6 +115,7 @@ class Event extends AppModel
         'hashes' => array('txt', 'HashesExport', 'txt'),
         'hosts' => array('txt', 'HostsExport', 'txt'),
         'json' => array('json', 'JsonExport', 'json'),
+        'kunai' => ['json', 'KunaiExport', 'json'],
         'netfilter' => array('txt', 'NetfilterExport', 'sh'),
         'opendata' => array('txt', 'OpendataExport', 'txt'),
         'openioc' => array('xml', 'OpeniocExport', 'ioc'),
@@ -151,6 +152,7 @@ class Event extends AppModel
         'blockedAttributeTags',
         'eventsExtendingUuid',
         'extended',
+        'extending',
         'extensionList',
         'excludeGalaxy',
         // 'includeCustomGalaxyCluster', // not used
@@ -2138,6 +2140,7 @@ class Event extends AppModel
             }
             $this->__attachTags($event, $justExportableTags);
             $this->__attachGalaxies($event, $user, $options['excludeGalaxy'], $options['fetchFullClusters'], $options['fetchFullClusterRelationship']);
+            $this->__pruneUnknownClusters($event, $user);
             $event = $this->Orgc->attachOrgs($event, $fieldsOrg);
             if (!$sharingGroupReferenceOnly && $event['Event']['sharing_group_id']) {
                 if (isset($sharingGroupData[$event['Event']['sharing_group_id']])) {
@@ -2300,6 +2303,11 @@ class Event extends AppModel
                 $results[$k] = $this->__mergeExtensions($user, $result, $options);
             }
         }
+        if ($options['extending']) {
+            foreach ($results as $k => $result) {
+                $results[$k] = $this->__mergeExtensions($user, $result, $options);
+            }
+        }
         if ($options['extensionList']) {
             foreach ($results as $k => $result) {
                 $results[$k] = $this->__fetchEventsExtendingEvent($user, $result, $options);
@@ -2401,6 +2409,20 @@ class Event extends AppModel
                         }
                     }
                     $attribute['Galaxy'] = array_values($attribute['Galaxy']);
+                }
+            }
+        }
+    }
+
+    private function __pruneUnknownClusters(array &$event, array $user)
+    {
+        if (!Configure::read('MISP.hide_unkown_cluster', true) || $user['Role']['perm_sync']) {
+            return;
+        }
+        foreach ($event['EventTag'] as $i => $eventTag) {
+            if ($eventTag['Tag']['is_galaxy']) {
+                if (preg_match($this->EventTag->Tag::RE_CUSTOM_GALAXY, $eventTag['Tag']['name'])) {
+                    unset($event['EventTag'][$i]);
                 }
             }
         }
@@ -2522,16 +2544,21 @@ class Event extends AppModel
      */
     private function __mergeExtensions(array $user, array $event, array $options)
     {
-        $extensions = $this->fetchEvent($user, [
-            'eventsExtendingUuid' => $event['Event']['uuid'],
+        $fetchOptions = [
             'includeEventCorrelations' => $options['includeEventCorrelations'],
             'includeWarninglistHits' => $options['includeWarninglistHits'],
             'noShadowAttributes' => $options['noShadowAttributes'],
-            'noEventReports' => $options['noEventReports'],
+            'noEventReports' => !$options['noEventReports'],
             'noSightings' => isset($options['noSightings']) ? $options['noSightings'] : null,
             'sgReferenceOnly' => $options['sgReferenceOnly'],
             'includeAnalystData' => $options['includeAnalystData'],
-        ]);
+        ];
+        if (!empty($options['extending'])) {
+            $fetchOptions['event_uuid'] = $event['Event']['extends_uuid'];
+        } else {
+            $fetchOptions['eventsExtendingUuid'] = $event['Event']['uuid'];
+        }
+        $extensions = $this->fetchEvent($user, $fetchOptions);
         foreach ($extensions as $extensionEvent) {
             $eventMeta = array(
                 'id' => $extensionEvent['Event']['id'],
@@ -2545,7 +2572,7 @@ class Event extends AppModel
                 ),
             );
             $event['Event']['extensionEvents'][$eventMeta['id']] = $eventMeta;
-            $thingsToMerge = array('Attribute', 'Object', 'ShadowAttribute', 'Galaxy');
+            $thingsToMerge = array('Attribute', 'Object', 'ShadowAttribute', 'Galaxy', 'EventReport');
             foreach ($thingsToMerge as $thingToMerge) {
                 if (!isset($event[$thingToMerge])) {
                     $event[$thingToMerge] = [];
@@ -2822,11 +2849,6 @@ class Event extends AppModel
             if (empty($options['scope'])) {
                 $scope = 'Attribute';
             } else {
-                if ($options['scope'] === 'Object') {
-                    $conditional_for_filter = [
-                        'Attribute.object_id' => 0
-                    ];
-                }
                 $scope = $options['scope'];
             }
             $deleted = $this->convert_filters($params['deleted']);
@@ -3629,7 +3651,7 @@ class Event extends AppModel
      * @return array[]
      * @throws Exception
      */
-    public function addMISPExportFile(array $user, $data, $isXml = false, $takeOwnership = false, $publish = false)
+    public function addMISPExportFile(array $user, $data, $isXml = false, $takeOwnership = false, $publish = false, $allowLockOverride = false, $fingerprint = false)
     {
         if (empty($data)) {
             throw new Exception("File is empty");
@@ -3671,10 +3693,16 @@ class Event extends AppModel
             }
             $event = array('Event' => $event);
             $created_id = 0;
-            $event['Event']['locked'] = 1;
+            if (!empty($allowLockOverride) && !empty(Configure::read('MISP.allow_users_override_locked_field_when_importing_events'))) {
+                if (!isset($event['Event']['locked'])) {
+                    $event['Event']['locked'] = 1;
+                }
+            } else {
+                $event['Event']['locked'] = 1;
+            }
             $event['Event']['published'] = $publish;
             $event = $this->updatedLockedFieldForAllAnalystData($event);
-            $result = $this->_add($event, true, $user, '', null, false, null, $created_id, $validationIssues);
+            $result = $this->_add($event, true, $user, '', null, false, null, $created_id, $validationIssues, $fingerprint);
             $results[] = [
                 'info' => $event['Event']['info'],
                 'result' => $result,
@@ -3755,7 +3783,7 @@ class Event extends AppModel
      * @return bool|int|string True when new event was created, int when event with the same uuid already exists, string when validation errors
      * @throws Exception
      */
-    public function _add(array &$data, $fromXml, array $user, $org_id = 0, $passAlong = null, $fromPull = false, $jobId = null, &$created_id = 0, &$validationErrors = array())
+    public function _add(array &$data, $fromXml, array $user, $org_id = 0, $passAlong = null, $fromPull = false, $jobId = null, &$created_id = 0, &$validationErrors = array(), $fingerprint = false)
     {
         if (Configure::read('MISP.enableEventBlocklisting') !== false && isset($data['Event']['uuid'])) {
             if (!isset($this->EventBlocklist)) {
@@ -3774,6 +3802,29 @@ class Event extends AppModel
             $this->loadLog()->createLogEntry($user, 'add', 'Event', 0, $validationErrors['Event']);
             return json_encode($validationErrors);
         }
+
+        // Check if the event was signed and if the signature is valid
+        if ($fromXml && !empty($data['Event']['protected'])) {
+            // Do we have any keys passed in the protected event?
+            if (empty($data['Event']['CryptographicKey'])) {
+                throw new MethodNotAllowedException(__('Cannot add a protected event without any valid attached public keys.'));
+            }
+            // Did we receive signed data? If so the fingerprint should be set.
+            if (empty($fingerprint)) {
+                throw new MethodNotAllowedException(__('Cannot add a protected event via the API, without the input being signed properly.'));
+            }
+            $found = false;
+            // Does any of the event\'s keys match the fingerprint?
+            foreach ($data['Event']['CryptographicKey'] as $key) {
+                if ($key['fingerprint'] === $fingerprint) {
+                    $found = true;
+                }
+            }
+            if (!$found) {
+                throw new MethodNotAllowedException(__('Cannot add the protected event, whilst the input was signed, the signing key was not found in the event\'s approved list of fingerprints..'));
+            }
+        }
+
         $this->create();
         // force check userid and orgname to be from yourself
         $data['Event']['user_id'] = $user['id'];
@@ -3852,6 +3903,7 @@ class Event extends AppModel
             // check if the uuid already exists
             $existingEvent = $this->find('first', [
                 'conditions' => ['Event.uuid' => $data['Event']['uuid']],
+                'contain' => ['CryptographicKey'],
                 'fields' => ['Event.id'],
                 'recursive' => -1,
             ]);
@@ -4216,13 +4268,13 @@ class Event extends AppModel
                         $changed = true;
                     }
                 }
-                $this->Attribute->editAttributeBulk($attributes, $saveResult, $user);
+                $this->Attribute->editAttributeBulk($attributes, $saveResult, $user, $server);
             }
             if (isset($data['Event']['Object'])) {
                 $data['Event']['Object'] = array_values($data['Event']['Object']);
                 foreach ($data['Event']['Object'] as $object) {
                     $nothingToChange = false;
-                    $result = $this->Object->editObject($object, $saveResult, $user, false, $force, $nothingToChange);
+                    $result = $this->Object->editObject($object, $saveResult, $user, false, $force, $nothingToChange, $server);
                     if ($result !== true) {
                         $validationErrors['Object'][] = $result;
                     }
@@ -5915,6 +5967,9 @@ class Event extends AppModel
         if (!is_array($module)) {
             throw new NotFoundException('Invalid module.');
         }
+        if (!$this->Module->canUse($user, 'Enrichment', ['name' => $module])) {
+            throw new MethodNotAllowedException('That export module is restricted.');
+        }
         // Export module can specify additional options for event fetch
         if (isset($module['meta']['fetch_options'])) {
             $options = array_merge($options, $module['meta']['fetch_options']);
@@ -6711,6 +6766,12 @@ class Event extends AppModel
                 if (empty($attribute['comment'])) {
                     $attribute['comment'] = $default_comment;
                 }
+                if (!isset($attribute['distribution'])) {
+                    $attribute['distribution'] = $this->Attribute->defaultDistribution();
+                }
+                if ($attribute['distribution'] != 4) {
+                    $attribute['sharing_group_id'] = 0;
+                }
                 if (!empty($attribute['data']) && !empty($attribute['encrypt'])) {
                     $attribute = $this->Attribute->onDemandEncrypt($attribute);
                 }
@@ -6736,7 +6797,16 @@ class Event extends AppModel
                         $id
                     );
                     if (!empty($original_uuid)) {
-                        $recovered_uuids[$attribute['uuid']] = $original_uuid;
+                        $recovered_uuids[$attribute['uuid']] = $original_uuid['uuid'];
+                        if (!empty($attribute['Tag'])) {
+                            foreach ($attribute['Tag'] as $tag) {
+                                $tag_id = $this->Attribute->AttributeTag->Tag->captureTag($tag, $user);
+                                if ($tag_id) {
+                                    $relationship_type = empty($tag['relationship_type']) ? false : $tag['relationship_type'];
+                                    $this->Attribute->AttributeTag->attachTagToAttribute($original_uuid['id'], $id, $tag_id, !empty($tag['local']), $relationship_type);
+                                }
+                            }
+                        }
                     } else {
                         $failed[] = $attribute['uuid'];
                     }
@@ -7045,11 +7115,11 @@ class Event extends AppModel
                     'Attribute.value' => $attribute_value
                 ),
                 'recursive' => -1,
-                'fields' => array('Attribute.uuid')
+                'fields' => array('Attribute.uuid', 'Attribute.id')
             )
         );
         if (!empty($original_uuid)) {
-            return $original_uuid['Attribute']['uuid'];
+            return $original_uuid['Attribute'];
         }
         $original_uuid = $this->Object->find(
             'first',
@@ -7093,6 +7163,12 @@ class Event extends AppModel
         $attribute['event_id'] = $event['Event']['id'];
         if (empty($attribute['comment']) && $default_comment) {
             $attribute['comment'] = $default_comment;
+        }
+        if (!isset($attribute['distribution'])) {
+            $attribute['distribution'] = $this->Attribute->defaultDistribution();
+        }
+        if ($attribute['distribution'] != 4) {
+            $attribute['sharing_group_id'] = 0;
         }
         if (!empty($attribute['data']) && !empty($attribute['encrypt'])) {
             $attribute = $this->Attribute->onDemandEncrypt($attribute);
@@ -7886,6 +7962,18 @@ class Event extends AppModel
         return [];
     }
 
+    public function getExtendedEventIdsFromEvent($user, $eventID)
+    {
+        $childEvent = $this->fetchSimpleEvent($user, $eventID);
+        if (!empty($childEvent)) {
+            $extendedEventIds = $this->fetchSimpleEventIds($user, ['conditions' => [
+                'uuid' => $childEvent['Event']['extends_uuid']
+            ]]);
+            return $extendedEventIds;
+        }
+        return [];
+    }
+
     public function getEventRepublishBanStatus($eventID)
     {
         $banStatus = [
@@ -8117,12 +8205,42 @@ class Event extends AppModel
             if (!empty($data[$type])) {
                 foreach ($data[$type] as $analystData) {
                     $analystData['note_type_name'] = $type;
-                    $analystData['object_type'] = $parentObjectType;
-                    $analystData['object_uuid'] = $parentObjectUUID;
+                    if (empty($analystData['object_type'])) {
+                        $analystData['object_type'] = $parentObjectType;
+                    }
+                    if (empty($analystData['object_uuid'])) {
+                        $analystData['object_uuid'] = $parentObjectUUID;
+                    }
                     $this->{$type}->captureAnalystData($user, $analystData);
                 }
             }
         }
+    }
+
+    public function runWorkflow($event_id, $workflow_ids)
+    {
+        $this->Workflow = ClassRegistry::init('Workflow');
+        $payload = [
+            'eventid' => [$event_id],
+        ];
+        $all_results = [
+            'success_count' => 0,
+            'error_count' => 0,
+            'error_messages' => [],
+        ];
+        foreach ($workflow_ids as $workflow_id) {
+            if (!$this->Workflow->isAdHocWorkflow($workflow_id)) {
+                throw new MethodNotAllowedException("Can only run a Ad-Hoc Workflow");
+            }
+            $result = $this->Workflow->executeWorkflow($workflow_id, $payload);
+            if (!empty($result['success'])) {
+                $all_results['success_count'] += 1;
+            } else {
+                $all_results['error_count'] += 1;
+                $all_results['error_messages'][] = $result['message'];
+            }
+        }
+        return $all_results;
     }
 
     public function getTrendsForTags(array $user, array $eventFilters=[], int $baseDayRange, int $rollingWindows=3, $tagFilterPrefixes=null): array

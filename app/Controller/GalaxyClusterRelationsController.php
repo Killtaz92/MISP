@@ -153,7 +153,7 @@ class GalaxyClusterRelationsController extends AppController
             }
             if ($this->_isRest()) {
                 if (empty($errors)) {
-                    return $this->RestResponse->saveSuccessResponse('GalaxyClusterRelation', 'add', $this->response->type(), $message);
+                    return $this->RestResponse->saveSuccessResponse('GalaxyClusterRelation', 'add', $this->GalaxyClusterRelation->id, $this->response->type(), $message);
                 } else {
                     $message .= sprintf('Reasons: %s', json_encode(array_merge($errors, $this->GalaxyClusterRelation->validationErrors)));
                     return $this->RestResponse->saveFailResponse('GalaxyClusterRelation', 'add', $message, $this->response->type());
@@ -248,7 +248,7 @@ class GalaxyClusterRelationsController extends AppController
             }
             if ($this->_isRest()) {
                 if (empty($errors)) {
-                    return $this->RestResponse->saveSuccessResponse('GalaxyClusterRelation', 'edit', $this->response->type(), $message);
+                    return $this->RestResponse->saveSuccessResponse('GalaxyClusterRelation', 'edit', $id, $this->response->type(), $message);
                 } else {
                     return $this->RestResponse->saveFailResponse('GalaxyClusterRelation', 'edit', false, $message, $this->response->type());
                 }

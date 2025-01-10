@@ -1,15 +1,15 @@
 var dotBlock_default = doT.template(' \
-<div class="canvas-workflow-block {{? it.module_data.is_misp_module }} is-misp-module {{?}}" data-nodeuid="{{=it.node_uid}}"> \
+<div class="canvas-workflow-block {{? it.module_data.is_misp_module }} is-misp-module {{?}}" data-nodeuid="{{!it.node_uid}}"> \
     <div style="width: 100%;"> \
         <div class="default-main-container"> \
             {{? it.module_data.icon }} \
-                <i class="fa-fw fa-{{=it.module_data.icon}} {{=it.module_data.icon_class}}"></i> \
+                <i class="fa-fw fa-{{!it.module_data.icon}} {{!it.module_data.icon_class}}"></i> \
             {{?}} \
             {{? it.module_data.icon_path }} \
-                <span style="display: flex; height: 1em;"><img src="/img/{{=it.module_data.icon_path}}" alt="Icon of {{=it.module_data.name}}" width="18" height="18" style="margin: auto 0; filter: grayscale(1);"></span> \
+                <span style="display: flex; height: 1em;"><img src="/img/{{!it.module_data.icon_path}}" alt="Icon of {{!it.module_data.name}}" width="18" height="18" style="margin: auto 0; filter: grayscale(1);"></span> \
             {{?}} \
             <strong style="margin-left: 0.25em;"> \
-                {{=it.module_data.name}} \
+                {{!it.module_data.name}} \
             </strong> \
             {{? it.module_data.is_misp_module }} \
                 <sup class="is-misp-module"></sup> \
@@ -29,23 +29,23 @@ var dotBlock_default = doT.template(' \
                 </span> \
             </span> \
         </div> \
-        <div class="muted" class="description" style="margin-bottom: 0.5em;">{{=it.module_data.description}}</div> \
+        <div class="muted" class="description" style="margin-bottom: 0.5em;">{{!it.module_data.description}}</div> \
         {{=it._node_param_html}} \
     </div> \
 </div>')
 
 var dotBlock_trigger = doT.template(' \
-<div class="canvas-workflow-block" data-nodeuid="{{=it.node_uid}}"> \
+<div class="canvas-workflow-block" data-nodeuid="{{!it.node_uid}}"> \
     <div style="width: 100%;"> \
         <div class="default-main-container" style="border:none;"> \
             {{? it.module_data.icon }} \
-                <i class="fa-fw fa-{{=it.module_data.icon}} {{=it.module_data.icon_class}}"></i> \
+                <i class="fa-fw fa-{{!it.module_data.icon}} {{!it.module_data.icon_class}}"></i> \
             {{?}} \
             {{? it.module_data.icon_path }} \
-                <span style="display: flex; height: 1em;"><img src="/img/{{=it.module_data.icon_path}}" alt="Icon of {{=it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
+                <span style="display: flex; height: 1em;"><img src="/img/{{!it.module_data.icon_path}}" alt="Icon of {{!it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
             {{?}} \
             <strong style="margin-left: 0.25em;"> \
-                {{=it.module_data.name}} \
+                {{!it.module_data.name}} \
             </strong> \
             <span style="margin-left: auto; display: flex; align-items: center; gap: 3px;"> \
                 {{? it.module_data.blocking }} \
@@ -62,24 +62,30 @@ var dotBlock_trigger = doT.template(' \
                 <span class="block-notification-container"> \
                     {{=it._node_notification_html}} \
                 </span> \
+                {{? it.module_data.params.length > 0 }} \
+                <span> \
+                    <a href="#block-modal" role="button" class="btn btn-mini" data-toggle="modal"><i class="fas fa-ellipsis-h"></i></a> \
+                </span> \
+                {{?}} \
             </span> \
         </div> \
+        <div class="muted" class="description" style="margin-bottom: 0.5em;">{{!it.module_data.description}}</div> \
         {{=it._node_param_html}} \
     </div> \
 </div>')
 
 var dotBlock_if = doT.template(' \
-<div class="canvas-workflow-block" data-nodeuid="{{=it.node_uid}}"> \
+<div class="canvas-workflow-block" data-nodeuid="{{!it.node_uid}}"> \
     <div style="width: 100%;"> \
         <div class="default-main-container"> \
             {{? it.module_data.icon }} \
-                <i class="fa-fw fa-{{=it.module_data.icon}} {{=it.module_data.icon_class}}"></i> \
+                <i class="fa-fw fa-{{!it.module_data.icon}} {{!it.module_data.icon_class}}"></i> \
             {{?}} \
             {{? it.module_data.icon_path }} \
-                <span style="display: flex; height: 1em;"><img src="/img/{{=it.module_data.icon_path}}" alt="Icon of {{=it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
+                <span style="display: flex; height: 1em;"><img src="/img/{{!it.module_data.icon_path}}" alt="Icon of {{!it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
             {{?}} \
             <strong style="margin-left: 0.25em;"> \
-                {{=it.module_data.name}} \
+                {{!it.module_data.name}} \
             </strong> \
             <span style="margin-left: auto;"> \
                 <span class="block-notification-container"> \
@@ -95,17 +101,17 @@ var dotBlock_if = doT.template(' \
 </div>')
 
 var dotBlock_concurrent = doT.template(' \
-<div class="canvas-workflow-block" data-nodeuid="{{=it.node_uid}}"> \
+<div class="canvas-workflow-block" data-nodeuid="{{!it.node_uid}}"> \
     <div style="width: 100%;"> \
         <div class="default-main-container"> \
             {{? it.module_data.icon }} \
-                <i class="fa-fw fa-{{=it.module_data.icon}} {{=it.module_data.icon_class}}"></i> \
+                <i class="fa-fw fa-{{!it.module_data.icon}} {{!it.module_data.icon_class}}"></i> \
             {{?}} \
             {{? it.module_data.icon_path }} \
-                <span style="display: flex; height: 1em;"><img src="/img/{{=it.module_data.icon_path}}" alt="Icon of {{=it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
+                <span style="display: flex; height: 1em;"><img src="/img/{{!it.module_data.icon_path}}" alt="Icon of {{!it.module_data.name}}" width="18" height="18" style="margin: auto 0;"></span> \
             {{?}} \
             <strong style="margin-left: 0.25em;"> \
-                {{=it.module_data.name}} \
+                {{!it.module_data.name}} \
             </strong> \
             <span style="margin-left: auto;"> \
                 <span class="block-notification-container"> \
@@ -117,21 +123,21 @@ var dotBlock_concurrent = doT.template(' \
             </span> \
         </div> \
         {{=it._node_param_html}} \
-        <div class="muted" class="description" style="margin-bottom: 0.5em;">{{=it.module_data.description}}</div> \
+        <div class="muted" class="description" style="margin-bottom: 0.5em;">{{!it.module_data.description}}</div> \
     </div> \
 </div>')
 
 var dotBlock_error = doT.template(' \
-<div class="canvas-workflow-block" data-nodeuid="{{=it.node_uid}}"> \
+<div class="canvas-workflow-block" data-nodeuid="{{!it.node_uid}}"> \
     <div style="width: 100%;"> \
-        <div class="alert alert-danger">{{=it.error}}</div> \
+        <div class="alert alert-danger">{{!it.error}}</div> \
         <div>Data:</div> \
-        <textarea rows=6 style="width: 95%;">{{=it.data}}</textarea> \
+        <textarea rows=6 style="width: 95%;">{{!it.data}}</textarea> \
     </div> \
 </div>')
 
 var dotBlock_connectionLabel = doT.template(' \
-<span class="label label-{{=it.variant}}" id="{{=it.id}}">{{=it.name}}</span>')
+<span class="label label-{{!it.variant}}" id="{{!it.id}}">{{!it.name}}</span>')
 
 var classBySeverity = {
     'info': 'info',
@@ -696,7 +702,7 @@ function revalidateContentCache() {
 
 
 function addNode(block, position, additionalData={}) {
-    var module = all_modules_by_id[block.id] || all_triggers_by_id[block.id]
+    var module = getModuleOrTrigger(block)
     if (!module) {
         console.error('Tried to add node for unknown module ' + block.data.id + ' (' + block.id + ')')
         return '';
@@ -816,7 +822,7 @@ function loadWorkflow(workflow) {
         if (i == '_frames') {
             return
         }
-        var module = all_modules_by_id[node.data.id] || all_triggers_by_id[node.data.id]
+        var module = getModuleOrTrigger(node.data)
         if (!module) {
             console.error('Tried to add node for unknown module ' + node.data.id + ' (' + node.id + ')')
             var html = window['dotBlock_error']({
@@ -1283,7 +1289,7 @@ function runWorkflow() {
                                 $popover.find('button i').removeClass('hidden')
                             },
                             success: function (data) {
-                                $popover.find('pre').text(data)
+                                $popover.find('pre').html(data)
                             },
                             error: xhrFailCallback,
                             complete: function () {
@@ -1651,11 +1657,15 @@ function enableHashpathPicker() {
 }
 
 function redrawFormatPicker(json, associatedParamId) {
-    var jsonData = JSON.parse(json)
-    var $customDataInput = genCustomDataInputForHashpathPicker(associatedParamId)
-    var UIPicker = generateCoreFormatUI(jsonData, associatedParamId)
-    var $modalBody = $('<div>').attr('style', 'display: flex; flex-direction: column').append($customDataInput, UIPicker)
-    $('#core-format-picker').parent().html($modalBody[0])
+    try {
+        var jsonData = JSON.parse(json)
+        var $customDataInput = genCustomDataInputForHashpathPicker(associatedParamId)
+        var UIPicker = generateCoreFormatUI(jsonData, associatedParamId)
+        var $modalBody = $('<div>').attr('style', 'display: flex; flex-direction: column').append($customDataInput, UIPicker)
+        $('#core-format-picker').parent().html($modalBody[0])
+    } catch (error) {
+        console.error('Invalid JSON');
+    }
 }
 
 function genCustomDataInputForHashpathPicker(associatedParamId) {
@@ -2152,6 +2162,10 @@ function getNodeFromNodeInput($input) {
     return node
 }
 
+function getModuleOrTrigger(module_data) {
+    return all_modules_by_id[module_data.id] || all_triggers_by_id[module_data.id]
+}
+
 function setParamValueForInput($input, node_data) {
     var param_id = $input.data('paramid')
     for (let i = 0; i < node_data.params.length; i++) {
@@ -2172,7 +2186,7 @@ function setParamValueForInput($input, node_data) {
 
 function genNodeNotificationHtml(block) {
     // var module = all_modules_by_id[block.id] || all_triggers_by_id[block.id]
-    var module = all_modules_by_id[block.module_data.id] || all_triggers_by_id[block.module_data.id]
+    var module = getModuleOrTrigger(block.module_data)
     if (!module) {
         console.error('Tried to get notification of unknown module ' + block.module_data.id)
         return '';
@@ -2210,7 +2224,7 @@ function genNodeNotificationHtml(block) {
 
 function genBlockNotificationForModalHtml(block) {
     // var module = all_modules_by_id[block.id] || all_triggers_by_id[block.id]
-    var module = all_modules_by_id[block.module_data.id] || all_triggers_by_id[block.module_data.id]
+    var module = getModuleOrTrigger(block.module_data)
     var html = ''
     var $notificationMainContainer = $('<div></div>')
     var reversedSeverities = [].concat(severities)
@@ -2243,7 +2257,7 @@ function genBlockNotificationForModalHtml(block) {
 }
 
 function genNodeFilteringHtml(node) {
-    var module = all_modules_by_id[node.data.module_data.id] || all_triggers_by_id[node.data.module_data.id]
+    var module = getModuleOrTrigger(node.data.module_data)
     var html = ''
     if (module.support_filters) {
         var $link = $('<a></a>')
@@ -2262,7 +2276,7 @@ function genNodeFilteringHtml(node) {
 }
 
 function genModalFilteringHtml(node) {
-    var module = all_modules_by_id[node.data.module_data.id] || all_triggers_by_id[node.data.module_data.id]
+    var module = getModuleOrTrigger(node.data.module_data)
     var html = ''
     if (module.support_filters) {
         html += genGenericBlockFilter(node)

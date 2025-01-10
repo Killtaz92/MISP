@@ -198,7 +198,7 @@ class User extends AppModel
             'className' => 'Server',
             'foreignKey' => 'server_id',
             'conditions' => '',
-            'fields' => array('Server.id', 'Server.url', 'Server.push_rules'),
+            'fields' => array('Server.id', 'Server.name', 'Server.url', 'Server.push_rules'),
             'order' => ''
         )
     );
@@ -2156,7 +2156,7 @@ class User extends AppModel
         if (empty($user)) {
             return false;
         }
-        $token = RandomTool::random_str(true, 40, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        $token = RandomTool::random_str(true, 40);
         RedisTool::init()->set('misp:forgot:' . $token, $user['User']['id'], ['nx', 'ex' => 600]);
         $baseurl = Configure::check('MISP.external_baseurl') ? Configure::read('MISP.external_baseurl') : Configure::read('MISP.baseurl');
         $body = __(

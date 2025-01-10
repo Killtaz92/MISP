@@ -33,8 +33,8 @@ class AppController extends Controller
 
     public $helpers = array('OrgImg', 'FontAwesome', 'UserName');
 
-    private $__queryVersion = '165';
-    public $pyMispVersion = '2.5.0';
+    private $__queryVersion = '169';
+    public $pyMispVersion = '2.5.4';
     public $phpmin = '8.1';
     public $phprec = '8.2';
     public $phptoonew = '9.0';
@@ -115,7 +115,8 @@ class AppController extends Controller
 
         // Set the baseurl for redirects
         $baseurl = empty(Configure::read('MISP.baseurl')) ? null : Configure::read('MISP.baseurl');
-        if (!empty($baseurl)) {
+
+        if (!empty($baseurl) && empty(Configure::read('MISP.disable_baseurl_coercion'))) {
             Configure::write('App.fullBaseUrl', $baseurl);
             Router::fullBaseUrl($baseurl);
         }
@@ -776,7 +777,7 @@ class AppController extends Controller
 
         $shouldBeLogged = $userMonitoringEnabled ||
             Configure::read('MISP.log_paranoid') ||
-            (Configure::read('MISP.log_paranoid_api') && isset($user['logged_by_authkey']) && $user['logged_by_authkey']);
+            (Configure::read('MISP.log_paranoid_api') && isset($user['logged_by_authkey']));
 
         if ($shouldBeLogged) {
             $includeRequestBody = !empty(Configure::read('MISP.log_paranoid_include_post_body')) || $userMonitoringEnabled;
@@ -1041,6 +1042,9 @@ class AppController extends Controller
             }
             if (!in_array('limit', $options['paramArray'])) {
                 $options['paramArray'][] = 'limit';
+            }
+            if (!in_array('sign', $options['paramArray'])) {
+                $options['paramArray'][] = 'sign';
             }
         }
         $request = $options['request'] ?? $this->request;
@@ -1364,8 +1368,7 @@ class AppController extends Controller
         $scope = empty($this->scopeOverride) ? $this->modelClass : $this->scopeOverride;
         if ($scope === 'MispObject') {
             $scope = 'Object';
-        }
-        if ($scope === 'MispAttribute') {
+        } else if ($scope === 'MispAttribute') {
             $scope = 'Attribute';
         }
         if (!isset($this->RestSearch->paramArray[$scope])) {
@@ -1375,7 +1378,7 @@ class AppController extends Controller
             $modelName = 'MispObject';
         } else if ($scope === 'Attribute') {
             $modelName = 'MispAttribute';
-        }else {
+        } else {
             $modelName = $scope;
         }
         if (!isset($this->$modelName)) {
@@ -1395,13 +1398,13 @@ class AppController extends Controller
         if (empty($filters) && $this->request->is('get')) {
             throw new BadRequestException(__('Restsearch queries using GET and no parameters are not allowed. If you have passed parameters via a JSON body, make sure you use POST requests.'));
         }
+        if ($filters === false) {
+            return $exception;
+        }
         if (empty($filters['returnFormat'])) {
             $filters['returnFormat'] = 'json';
         }
         unset($filterData);
-        if ($filters === false) {
-            return $exception;
-        }
 
         $user = $this->_closeSession();
 
@@ -1420,7 +1423,7 @@ class AppController extends Controller
         $responseType = empty($model->validFormats[$returnFormat][0]) ? 'json' : $model->validFormats[$returnFormat][0];
         // halt execution if we were to query for items above the ID. Blocks the endless caching bug
         if (!empty($filters['page']) && !empty($filters['returnFormat']) && $filters['returnFormat'] === 'cache') {
-            if ($this->__cachingOverflow($filters, $scope)) {
+            if ($this->__cachingOverflow($filters, $modelName, $scope)) {
                 $filename = $this->RestSearch->getFilename($filters, $scope, $responseType);
                 return $this->RestResponse->viewData('', $responseType, false, true, $filename, [
                     'X-Result-Count' => 0,
@@ -1438,6 +1441,9 @@ class AppController extends Controller
             $this->set($final);
             $this->render('/Events/module_views/' . $renderView);
         } else {
+            if (!empty($filters['sign'])) {
+                $this->RestResponse->signContents = true;
+            }
             $filename = $this->RestSearch->getFilename($filters, $scope, $responseType);
             $headers = ['X-Result-Count' => $elementCounter, 'X-Export-Module-Used' => $returnFormat, 'X-Response-Format' => $responseType, 'X-Skipped-Elements-Count' => $skippedElementsCounter];
             return $this->RestResponse->viewData($final, $responseType, false, true, $filename, $headers);
@@ -1448,13 +1454,14 @@ class AppController extends Controller
      * Halt execution if we were to query for items above the ID. Blocks the endless caching bug.
      *
      * @param array $filters
+     * @param string $modelName
      * @param string $scope
      * @return bool
      */
-    private function __cachingOverflow($filters, $scope)
+    private function __cachingOverflow(array $filters, $modelName, $scope)
     {
         $offset = ($filters['page'] * (empty($filters['limit']) ? 60 : $filters['limit'])) + 1;
-        $max_id = $this->$scope->query(sprintf('SELECT max(id) as max_id from %s;', Inflector::tableize($scope)));
+        $max_id = $this->$modelName->query(sprintf('SELECT max(id) as max_id from %s;', Inflector::tableize($scope)));
         $max_id = intval($max_id[0][0]['max_id']);
         if ($max_id < $offset) {
             return true;
