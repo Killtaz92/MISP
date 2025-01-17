@@ -77,14 +77,15 @@ class GalaxyClustersController extends AppController
             $searchall = '%' . strtolower($filters['searchall']) . '%';
             $synonym_hits = $this->GalaxyCluster->GalaxyElement->find(
                 'list',
-                array(
+                [
                     'recursive' => -1,
-                    'conditions' => array(
-                        'LOWER(GalaxyElement.value) LIKE' => $searchall,
-                        'GalaxyElement.key' => 'synonyms' ),
-                        'fields' => array(
-                            'GalaxyElement.galaxy_cluster_id')
-                        )
+                    'conditions' => [
+                        'LOWER(GalaxyElement.value) LIKE' => $searchall
+                    ],
+                    'fields' => [
+                        'GalaxyElement.galaxy_cluster_id'
+                    ]
+                ]
             );
             $searchConditions = array(
                 'OR' => array(
