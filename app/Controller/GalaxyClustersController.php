@@ -101,6 +101,11 @@ class GalaxyClustersController extends AppController
             $clusters = $this->GalaxyCluster->find(
                 'all',
                 array(
+                    'contain' => [
+                        'Galaxy' => [
+                            'fields' => ['id', 'uuid', 'name', 'type', 'namespace', 'version', 'description', 'default']
+                        ]
+                    ],
                     'conditions' => array(
                         'AND' => array($contextConditions, $searchConditions, $aclConditions)
                     ),
